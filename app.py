@@ -304,11 +304,6 @@ with right:
         st.markdown("<div class='kpiRow'>", unsafe_allow_html=True)
         st.markdown(f"""
           <div class="kpi">
-            <div class="label">Hardware stimato</div>
-            <div class="value">{res["sizing"]["hardware"]}</div>
-            <div class="hint">{res["sizing"]["points"]} punti (minimo)</div>
-          </div>
-          <div class="kpi">
             <div class="label">CAPEX stimato</div>
             <div class="value">{fmt_eur(capex)}</div>
             <div class="hint">acquisto + installazione</div>
