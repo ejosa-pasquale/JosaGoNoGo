@@ -272,7 +272,7 @@ with left:
             st.session_state["last_result"] = estimate(8, 20000.0, p)
 
 with right:
-    st.markdown("<div class='card'><h3>2) Risultato</h3><div class='subtle'>Decisione + KPI chiave (economics + ESG). Peak e giorni lavorativi sempre visibili.</div></div>", unsafe_allow_html=True)
+    st.markdown("<div class='card'><h3>2) Risultato</h3><div class='subtle'>Y35 by eV Field Service.</div></div>", unsafe_allow_html=True)
     st.write("")
 
     if run:
