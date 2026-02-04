@@ -1,19 +1,18 @@
-# eV Field Service — Streamlit GO/NO-GO (Peak Visible)
+# eV Field Service — Streamlit GO/NO-GO (Peak + ESG + 240 gg)
 
-App Streamlit per demo commerciali e pre-valutazioni:
-- input minimo: **N veicoli** + **km annui medi**
-- output immediato: **GO/NO‑GO**, sizing hardware, CAPEX, payback (solo HW), KPI ESG
-- dimensionamento **sempre su picco**: domanda media × **peak factor** (default 1.25)
-- peak factor è **visibile** nel risultato (badge + KPI domanda media/picco)
+- Input minimo: **N veicoli** + **km annui medi**
+- Dimensionamento su **giorno di picco**: media × peak factor (default 1.25)
+- Domanda giornaliera calcolata su **240 giorni lavorativi** (default)
+- KPI ESG estesi:
+  - CO₂ evitata (t/anno)
+  - CO₂ evitata per veicolo (kg/anno)
+  - CO₂ evitata per km (g/km)
+  - Diesel evitato (L/anno)
+  - Alberi equivalenti
+  - Rating ESG (demo)
 
 ## Avvio
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
-```
-
-## Docker (opzionale)
-```bash
-docker build -t ev-go-nogo .
-docker run -p 8501:8501 ev-go-nogo
 ```

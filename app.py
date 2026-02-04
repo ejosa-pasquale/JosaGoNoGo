@@ -5,9 +5,6 @@ from dataclasses import dataclass
 
 st.set_page_config(page_title="eV Field Service | GO/NO-GO", page_icon="⚡", layout="wide")
 
-# -----------------------------
-# Styling (brand + UX)
-# -----------------------------
 st.markdown("""
 <style>
 :root{
@@ -16,15 +13,14 @@ st.markdown("""
   --text: #0F172A;
   --muted: #475569;
   --line: #E2E8F0;
-  --brand1: #0EA5E9;  /* cyan */
-  --brand2: #10B981;  /* green */
+  --brand1: #0EA5E9;
+  --brand2: #10B981;
   --warn: #F59E0B;
   --bad: #EF4444;
   --good: #22C55E;
 }
 .stApp { background: var(--bg); color: var(--text); }
 .block-container { padding-top: 1.6rem; padding-bottom: 2.5rem; max-width: 1200px; }
-
 .hero {
   background: linear-gradient(90deg, rgba(14,165,233,0.14) 0%, rgba(16,185,129,0.14) 100%);
   border: 1px solid rgba(226,232,240,1);
@@ -33,68 +29,43 @@ st.markdown("""
 }
 .hero h1{ font-size: 1.55rem; line-height: 1.2; margin: 0; font-weight: 850; }
 .hero p{ margin: 6px 0 0 0; color: var(--muted); font-size: 0.95rem; }
-
 .badge {
-  display:inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.78rem;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,0.85);
-  color: #0f172a;
+  display:inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 0.78rem;
+  border: 1px solid var(--line); background: rgba(255,255,255,0.85); color: #0f172a;
 }
-
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
 .card h3{ margin: 0 0 10px 0; font-size: 1.05rem; font-weight: 800; }
 .subtle { color: var(--muted); font-size: 0.92rem; }
-
 .pill{
-  display:inline-flex;
-  gap: 8px;
-  align-items:center;
-  padding: 7px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: #fff;
-  font-weight: 750;
-  font-size: 0.9rem;
-  margin-right: 8px;
+  display:inline-flex; gap: 8px; align-items:center; padding: 7px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; font-weight: 750; font-size: 0.9rem; margin-right: 8px; margin-bottom: 6px;
 }
 .pill.good{ border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.08); }
 .pill.bad{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); }
 .pill.warn{ border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.08); }
-
 .kpiRow { display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 @media (max-width: 1100px) { .kpiRow { grid-template-columns: repeat(2, 1fr); } }
 .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 14px 10px 14px; }
 .kpi .label{ color: var(--muted); font-size: 0.83rem; margin-bottom: 2px;}
 .kpi .value{ font-size: 1.15rem; font-weight: 900; }
 .kpi .hint{ color: var(--muted); font-size: 0.78rem; margin-top: 4px; }
-
 .hr { height: 1px; background: var(--line); margin: 10px 0 2px 0; }
 .footer{ color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
-# -----------------------------
-# Model
-# -----------------------------
 @dataclass(frozen=True)
 class Params:
-    # Operatività
     charging_window_hours: float = 10.0
+    working_days: int = 240
 
-    # Rotazioni
     ac_rotation: int = 2
     dc_rotation: int = 6
 
-    # Potenze effettive
     ac_power_effective_kw: float = 11.0
     dc30_power_kw: float = 30.0
     dc60_power_kw: float = 60.0
 
-    # Costi default (acq + ins)
     ac22_acq_eur: float = 1500.0
     ac22_ins_eur: float = 1600.0
     dc30_acq_eur: float = 8500.0
@@ -102,46 +73,35 @@ class Params:
     dc60_acq_eur: float = 16000.0
     dc60_ins_eur: float = 7500.0
 
-    # Consumi / costi energia
     ev_kwh_per_km: float = 0.22
     energy_internal_eur_per_kwh: float = 0.22
 
-    # Diesel
     diesel_km_per_l: float = 15.0
     diesel_eur_per_l: float = 1.75
     diesel_kgco2_per_l: float = 2.65
 
-    # ESG
     trees_per_ton_co2: int = 50
-
-    # Gate economico
     payback_threshold_years: float = 4.0
 
-    # Peak factor (dimensionamento su picco)
     peak_factor: float = 1.25
 
 
 def estimate(N: int, km_per_vehicle_year: float, p: Params):
     km_total_year = N * km_per_vehicle_year
-    km_per_vehicle_day = km_per_vehicle_year / 240.0
+    kwh_total_year = km_total_year * p.ev_kwh_per_km
+
+    # Giorno medio (su giorni lavorativi)
+    km_per_vehicle_day = km_per_vehicle_year / float(p.working_days)
     kwh_per_vehicle_day = km_per_vehicle_day * p.ev_kwh_per_km
 
-    # Domanda media e domanda di picco (usata per sizing)
     kwh_total_day_avg = N * kwh_per_vehicle_day
     kwh_total_day_peak = kwh_total_day_avg * p.peak_factor
 
-    kwh_total_year = km_total_year * p.ev_kwh_per_km
-
-    # Capacità giornaliera per punto
     kwh_ac_day = p.ac_power_effective_kw * p.charging_window_hours
     kwh_dc30_day = p.dc30_power_kw * p.charging_window_hours
     kwh_dc60_day = p.dc60_power_kw * p.charging_window_hours
 
-    # Scelta AC vs DC: se energia/auto/giorno > 55 kWh -> DC
     needs_dc = kwh_per_vehicle_day > 55.0
-
-    sizing = {}
-    capex = 0.0
 
     if not needs_dc:
         q_by_rotation = ceil(N / p.ac_rotation)
@@ -171,10 +131,13 @@ def estimate(N: int, km_per_vehicle_year: float, p: Params):
     delta_fossil_year = diesel_cost_year - ev_energy_cost_year
 
     payback_years = (capex / delta_fossil_year) if delta_fossil_year > 0 else float("inf")
-    go = (delta_fossil_year > 0) and (payback_years <= p.payback_threshold_years)
+    decision = "GO" if (delta_fossil_year > 0 and payback_years <= p.payback_threshold_years) else "NO-GO"
 
-    # ESG
+    # ESG KPIs (baseline diesel, in questa versione "light")
     co2_avoided_tons_year = (diesel_liters_year * p.diesel_kgco2_per_l) / 1000.0
+    co2_avoided_kg_year = co2_avoided_tons_year * 1000.0
+    co2_avoided_kg_per_vehicle_year = co2_avoided_kg_year / N
+    co2_avoided_g_per_km = (co2_avoided_kg_year * 1000.0) / km_total_year if km_total_year > 0 else 0.0
     trees_equivalent = int(co2_avoided_tons_year * p.trees_per_ton_co2)
 
     if co2_avoided_tons_year >= 10:
@@ -189,6 +152,7 @@ def estimate(N: int, km_per_vehicle_year: float, p: Params):
     return {
         "inputs": {"N": N, "km_per_vehicle_year": km_per_vehicle_year, "km_total_year": km_total_year},
         "energy": {
+            "working_days": p.working_days,
             "kwh_per_vehicle_day": kwh_per_vehicle_day,
             "kwh_total_day_avg": kwh_total_day_avg,
             "kwh_total_day_peak": kwh_total_day_peak,
@@ -201,20 +165,19 @@ def estimate(N: int, km_per_vehicle_year: float, p: Params):
             "ev_energy_cost_year_eur": ev_energy_cost_year,
             "delta_fossil_year_eur": delta_fossil_year,
             "payback_years_hw_only": payback_years,
-            "decision": "GO" if go else "NO-GO",
+            "decision": decision,
         },
         "esg": {
             "diesel_avoided_liters_year": diesel_liters_year,
             "co2_avoided_tons_year": co2_avoided_tons_year,
+            "co2_avoided_kg_per_vehicle_year": co2_avoided_kg_per_vehicle_year,
+            "co2_avoided_g_per_km": co2_avoided_g_per_km,
             "trees_equivalent": trees_equivalent,
             "esg_rating": esg_rating,
         },
     }
 
 
-# -----------------------------
-# Hero
-# -----------------------------
 st.markdown("""
 <div class="hero">
   <div class="badge">⚡ GO/NO-GO — Fleet Electrification</div>
@@ -224,9 +187,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.write("")
 
-# -----------------------------
-# Sidebar (Avanzate)
-# -----------------------------
 with st.sidebar:
     st.header("🧩 Impostazioni")
     st.caption("Per una demo semplice, lascia i default. Apri *Avanzate* solo se vuoi rifinire le assunzioni.")
@@ -234,6 +194,7 @@ with st.sidebar:
         colA, colB = st.columns(2)
         with colA:
             st.number_input("Finestra ricarica (h)", 4.0, 16.0, 10.0, 0.5, key="Finestra ricarica (h)")
+            st.number_input("Giorni lavorativi/anno", 200, 365, 240, 5, key="Giorni lavorativi/anno")
             st.number_input("Rotazione AC (auto/punto/g)", 1, 6, 2, 1, key="Rotazione AC (auto/punto/g)")
             st.number_input("Rotazione DC (auto/punto/g)", 1, 20, 6, 1, key="Rotazione DC (auto/punto/g)")
             st.number_input("Consumo EV (kWh/km)", 0.10, 0.80, 0.22, 0.01, key="Consumo EV (kWh/km)")
@@ -261,6 +222,7 @@ def _get(label: str, default):
 
 p = Params(
     charging_window_hours=_get("Finestra ricarica (h)", 10.0),
+    working_days=_get("Giorni lavorativi/anno", 240),
     ac_rotation=_get("Rotazione AC (auto/punto/g)", 2),
     dc_rotation=_get("Rotazione DC (auto/punto/g)", 6),
     ev_kwh_per_km=_get("Consumo EV (kWh/km)", 0.22),
@@ -277,9 +239,6 @@ p = Params(
     dc60_ins_eur=_get("DC60 install (€)", 7500.0),
 )
 
-# -----------------------------
-# Main UX
-# -----------------------------
 left, right = st.columns([1, 1], gap="large")
 
 with left:
@@ -313,7 +272,7 @@ with left:
             st.session_state["last_result"] = estimate(8, 20000.0, p)
 
 with right:
-    st.markdown("<div class='card'><h3>2) Risultato</h3><div class='subtle'>Decisione + KPI chiave (economics + ESG). Peak factor sempre visibile.</div></div>", unsafe_allow_html=True)
+    st.markdown("<div class='card'><h3>2) Risultato</h3><div class='subtle'>Decisione + KPI chiave (economics + ESG). Peak e giorni lavorativi sempre visibili.</div></div>", unsafe_allow_html=True)
     st.write("")
 
     if run:
@@ -330,13 +289,13 @@ with right:
         pb = res["economics"]["payback_years_hw_only"]
         capex = res["capex"]["capex_eur"]
 
-        # Decision + Peak badge (VISIBILE)
         if decision == "GO":
             st.markdown("<div class='pill good'>✅ GO <span class='subtle'>investimento compatibile con il ritorno</span></div>", unsafe_allow_html=True)
         else:
             st.markdown("<div class='pill bad'>⛔ NO‑GO <span class='subtle'>investimento non compatibile con il ritorno</span></div>", unsafe_allow_html=True)
 
         st.markdown(f"<div class='pill warn'>⚡ Peak-ready +{int((p.peak_factor-1)*100)}% (factor {p.peak_factor:.2f})</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='pill warn'>📅 {p.working_days} giorni lavorativi/anno</div>", unsafe_allow_html=True)
 
         def fmt_eur(x): return f"€ {x:,.0f}"
         def fmt_years(x): return "∞" if x == float("inf") else f"{x:.2f} anni"
@@ -371,44 +330,53 @@ with right:
         st.markdown("<div class='kpiRow'>", unsafe_allow_html=True)
         st.markdown(f"""
           <div class="kpi">
-            <div class="label">Domanda (media)</div>
-            <div class="value">{res["energy"]["kwh_total_day_avg"]:.1f} kWh/g</div>
-            <div class="hint">KM/240 × consumo</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Domanda (picco)</div>
-            <div class="value">{res["energy"]["kwh_total_day_peak"]:.1f} kWh/g</div>
-            <div class="hint">media × peak factor</div>
-          </div>
-          <div class="kpi">
             <div class="label">CO₂ evitata</div>
             <div class="value">{res["esg"]["co2_avoided_tons_year"]:.2f} t/anno</div>
             <div class="hint">baseline diesel</div>
           </div>
           <div class="kpi">
-            <div class="label">Rating ESG</div>
-            <div class="value">{res["esg"]["esg_rating"]}</div>
-            <div class="hint">scala demo (customizzabile)</div>
+            <div class="label">CO₂ evitata / veicolo</div>
+            <div class="value">{res["esg"]["co2_avoided_kg_per_vehicle_year"]:.0f} kg/anno</div>
+            <div class="hint">media per veicolo</div>
+          </div>
+          <div class="kpi">
+            <div class="label">CO₂ evitata / km</div>
+            <div class="value">{res["esg"]["co2_avoided_g_per_km"]:.0f} g/km</div>
+            <div class="hint">intensity</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Alberi equivalenti</div>
+            <div class="value">🌲 {res["esg"]["trees_equivalent"]}</div>
+            <div class="hint">metrica comunicativa</div>
           </div>
         """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
         st.write("")
-        e1, e2 = st.columns(2)
-        with e1:
-            st.markdown(f"<div class='card'><h3>KPI ESG (comunicabili)</h3><div class='subtle'>Ottimi per report ESG e presentazioni interne.</div></div>", unsafe_allow_html=True)
-            st.write("")
-            st.metric("Diesel evitato", f"{res['esg']['diesel_avoided_liters_year']:,.0f} L/anno")
-            st.metric("Alberi equivalenti", f"🌲 {res['esg']['trees_equivalent']}")
-        with e2:
-            st.markdown(f"<div class='card'><h3>Perché questa decisione?</h3><div class='subtle'>Sintesi in linguaggio da CFO + Operations.</div></div>", unsafe_allow_html=True)
-            st.write("")
-            if decision == "GO":
-                st.write("✅ Il **payback** è sotto la soglia e il progetto genera risparmio energetico rispetto al diesel.")
-                st.write("⚡ L'infrastruttura è dimensionata su **giorni di picco**, riducendo il rischio operativo.")
-            else:
-                st.write("⛔ Il payback supera la soglia (o il saving è nullo).")
-                st.write("⚡ Anche dimensionando su picco, l'investimento non rientra nei tempi target.")
+        st.markdown("<div class='kpiRow'>", unsafe_allow_html=True)
+        st.markdown(f"""
+          <div class="kpi">
+            <div class="label">Domanda (media)</div>
+            <div class="value">{res["energy"]["kwh_total_day_avg"]:.1f} kWh/g</div>
+            <div class="hint">su {p.working_days} gg</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Domanda (picco)</div>
+            <div class="value">{res["energy"]["kwh_total_day_peak"]:.1f} kWh/g</div>
+            <div class="hint">media × peak</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Diesel evitato</div>
+            <div class="value">{res["esg"]["diesel_avoided_liters_year"]:,.0f} L/anno</div>
+            <div class="hint">stima</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Rating ESG</div>
+            <div class="value">{res["esg"]["esg_rating"]}</div>
+            <div class="hint">demo</div>
+          </div>
+        """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
         st.write("")
         tab1, tab2, tab3 = st.tabs(["📌 Dettaglio", "📤 Export", "ℹ️ Metodo"])
@@ -428,6 +396,7 @@ with right:
         with tab2:
             df = pd.DataFrame([{
                 **res["inputs"],
+                "working_days": p.working_days,
                 "peak_factor": p.peak_factor,
                 "kwh_total_day_avg": res["energy"]["kwh_total_day_avg"],
                 "kwh_total_day_peak": res["energy"]["kwh_total_day_peak"],
@@ -439,6 +408,8 @@ with right:
                 "payback_years_hw_only": pb,
                 "decision": decision,
                 "co2_avoided_tons_year": res["esg"]["co2_avoided_tons_year"],
+                "co2_avoided_kg_per_vehicle_year": res["esg"]["co2_avoided_kg_per_vehicle_year"],
+                "co2_avoided_g_per_km": res["esg"]["co2_avoided_g_per_km"],
                 "diesel_avoided_liters_year": res["esg"]["diesel_avoided_liters_year"],
                 "trees_equivalent": res["esg"]["trees_equivalent"],
                 "esg_rating": res["esg"]["esg_rating"],
@@ -449,15 +420,14 @@ with right:
 
         with tab3:
             st.markdown("""
-**Metodo (semplice ma robusto):**
-- Domanda giornaliera media = `KM/240 × consumo × N`
-- Domanda di picco = `media × peak factor` (default 1.25)
-- Dimensionamento punti: max( vincolo rotazione , vincolo energia su picco )
+**Metodo:**
+- Domanda media = `KM / giorni_lavorativi × consumo × N` (default **240 gg**)
+- Domanda picco = `media × peak factor` (default **1.25**)
+- Dimensionamento punti: `max(rotazione, energia su picco)`
 - CAPEX = (acquisto + installazione) × punti
-- KPI ESG: CO₂ evitata e alberi equivalenti (metrica comunicativa)
+- ESG: CO₂ evitata (totale / veicolo / km), diesel evitato, alberi equivalenti.
 
-> KPI economici: base energia (non include leasing/manutenzione).  
-Per decisione definitiva: usare il simulatore completo.
+> Economico: “solo energia” (no leasing/manutenzione).
 """)
 
 st.markdown("<div class='footer'>Tip: per un pitch, screenshot + CSV export → allegato perfetto.</div>", unsafe_allow_html=True)
