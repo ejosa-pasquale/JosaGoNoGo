@@ -1,16 +1,22 @@
-# eV Field Service — Streamlit GO/NO-GO (Light)
+# eV Field Service — Streamlit GO/NO-GO (UX friendly)
 
-Questa app Streamlit:
-- prende in input **N veicoli** e **km annui medi per veicolo**
-- dimensiona una configurazione minima **AC** (o **DC** se la domanda per veicolo è molto alta)
-- stima **CAPEX** come: `Σ (acq + ins) * q`
-- calcola KPI:
-  - **Δ costo energia vs diesel** (base, solo energia)
-  - **Payback** (solo HW)
-  - **CO₂ evitata**, **diesel evitato**, **alberi equivalenti**, **rating ESG (semplice)**
+App Streamlit pensata per demo **commerciali** e pre‑valutazioni:
+- input minimo: **N veicoli** + **km annui medi**
+- output immediato: **GO/NO‑GO**, sizing hardware, CAPEX, payback (solo HW), KPI ESG
 
 ## Avvio
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+## UX
+- Sidebar con **Avanzate** chiuse di default
+- KPI in card, testo “da board”
+- Export CSV pronto per email/report
+
+## Deploy (opzionale)
+```bash
+docker build -t ev-go-nogo .
+docker run -p 8501:8501 ev-go-nogo
 ```
