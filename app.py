@@ -126,12 +126,17 @@ class Params:
     trees_per_ton_co2: int = 50
     payback_threshold_years: float = 4.0
 
+    # Peak factor: moltiplica la domanda giornaliera media per dimensionare su picco
+    peak_factor: float = 1.25
+
 
 def estimate(N: int, km_per_vehicle_year: float, p: Params):
     km_total_year = N * km_per_vehicle_year
     km_per_vehicle_day = km_per_vehicle_year / 365.0
     kwh_per_vehicle_day = km_per_vehicle_day * p.ev_kwh_per_km
     kwh_total_day = N * kwh_per_vehicle_day
+    # Dimensionamento su picco (non solo media): domanda giornaliera * peak_factor
+    kwh_total_day_peak = kwh_total_day * p.peak_factor
     kwh_total_year = km_total_year * p.ev_kwh_per_km
 
     kwh_ac_day = p.ac_power_effective_kw * p.charging_window_hours
@@ -145,7 +150,7 @@ def estimate(N: int, km_per_vehicle_year: float, p: Params):
 
     if not needs_dc:
         q_by_rotation = ceil(N / p.ac_rotation)
-        q_by_energy = ceil(kwh_total_day / kwh_ac_day) if kwh_total_day > 0 else 0
+        q_by_energy = ceil(kwh_total_day_peak / kwh_ac_day) if kwh_total_day > 0 else 0
         q = max(q_by_rotation, q_by_energy)
         capex = q * (p.ac22_acq_eur + p.ac22_ins_eur)
         sizing = dict(hardware="AC 22kW (eff. 11kW)", points=q, by_rotation=q_by_rotation, by_energy=q_by_energy, kwh_per_station_day=kwh_ac_day)
@@ -153,13 +158,13 @@ def estimate(N: int, km_per_vehicle_year: float, p: Params):
         use_dc60 = kwh_per_vehicle_day > 90.0
         if use_dc60:
             q_by_rotation = ceil(N / p.dc_rotation)
-            q_by_energy = ceil(kwh_total_day / kwh_dc60_day) if kwh_total_day > 0 else 0
+            q_by_energy = ceil(kwh_total_day_peak / kwh_dc60_day) if kwh_total_day > 0 else 0
             q = max(q_by_rotation, q_by_energy)
             capex = q * (p.dc60_acq_eur + p.dc60_ins_eur)
             sizing = dict(hardware="DC 60kW", points=q, by_rotation=q_by_rotation, by_energy=q_by_energy, kwh_per_station_day=kwh_dc60_day)
         else:
             q_by_rotation = ceil(N / p.dc_rotation)
-            q_by_energy = ceil(kwh_total_day / kwh_dc30_day) if kwh_total_day > 0 else 0
+            q_by_energy = ceil(kwh_total_day_peak / kwh_dc30_day) if kwh_total_day > 0 else 0
             q = max(q_by_rotation, q_by_energy)
             capex = q * (p.dc30_acq_eur + p.dc30_ins_eur)
             sizing = dict(hardware="DC 30kW", points=q, by_rotation=q_by_rotation, by_energy=q_by_energy, kwh_per_station_day=kwh_dc30_day)
@@ -186,7 +191,7 @@ def estimate(N: int, km_per_vehicle_year: float, p: Params):
 
     return {
         "inputs": {"N": N, "km_per_vehicle_year": km_per_vehicle_year, "km_total_year": km_total_year},
-        "energy": {"kwh_per_vehicle_day": kwh_per_vehicle_day, "kwh_total_day": kwh_total_day, "kwh_total_year": kwh_total_year},
+        "energy": {"kwh_per_vehicle_day": kwh_per_vehicle_day, "kwh_total_day": kwh_total_day, "kwh_total_day_peak": kwh_total_day_peak, "kwh_total_year": kwh_total_year},
         "sizing": sizing,
         "capex": {"capex_eur": capex},
         "economics": {
@@ -259,6 +264,7 @@ p = Params(
     diesel_km_per_l=_get("Diesel (km/L)", 15.0),
     diesel_eur_per_l=_get("Diesel (€/L)", 1.75),
     payback_threshold_years=_get("Soglia payback (anni)", 4.0),
+    peak_factor=_get("Peak factor (× domanda gg)", 1.25),
     ac22_acq_eur=_get("AC22 acquisto (€)", 1500.0),
     ac22_ins_eur=_get("AC22 install (€)", 1600.0),
     dc30_acq_eur=_get("DC30 acquisto (€)", 8500.0),
@@ -416,6 +422,7 @@ with right:
             st.markdown("""
 **Cosa fa questa app:**
 - Stima energia flotta da **N** e **km annui/veicolo** (consumo EV medio).
+- Applica un **peak factor** (× domanda giornaliera) per dimensionare su picchi.
 - Dimensiona i punti ricarica con 2 vincoli:
   1) rotazione (auto/punto/giorno)  
   2) energia erogabile nella finestra di ricarica

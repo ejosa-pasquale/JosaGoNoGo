@@ -20,3 +20,6 @@ streamlit run app.py
 docker build -t ev-go-nogo .
 docker run -p 8501:8501 ev-go-nogo
 ```
+
+## Peak factor
+L'app dimensiona l'infrastruttura usando una domanda giornaliera **di picco**: `domanda_media * peak_factor` (default 1.25).
