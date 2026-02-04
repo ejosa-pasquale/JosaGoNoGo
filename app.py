@@ -123,7 +123,7 @@ class Params:
 
 def estimate(N: int, km_per_vehicle_year: float, p: Params):
     km_total_year = N * km_per_vehicle_year
-    km_per_vehicle_day = km_per_vehicle_year / 365.0
+    km_per_vehicle_day = km_per_vehicle_year / 240.0
     kwh_per_vehicle_day = km_per_vehicle_day * p.ev_kwh_per_km
 
     # Domanda media e domanda di picco (usata per sizing)
@@ -373,7 +373,7 @@ with right:
           <div class="kpi">
             <div class="label">Domanda (media)</div>
             <div class="value">{res["energy"]["kwh_total_day_avg"]:.1f} kWh/g</div>
-            <div class="hint">KM/365 × consumo</div>
+            <div class="hint">KM/240 × consumo</div>
           </div>
           <div class="kpi">
             <div class="label">Domanda (picco)</div>
@@ -450,7 +450,7 @@ with right:
         with tab3:
             st.markdown("""
 **Metodo (semplice ma robusto):**
-- Domanda giornaliera media = `KM/365 × consumo × N`
+- Domanda giornaliera media = `KM/240 × consumo × N`
 - Domanda di picco = `media × peak factor` (default 1.25)
 - Dimensionamento punti: max( vincolo rotazione , vincolo energia su picco )
 - CAPEX = (acquisto + installazione) × punti
